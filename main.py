@@ -101,3 +101,4 @@ class WordCounterApp:
 if __name__ == "__main__":
     app = WordCounterApp()
     app.run()
+ #go gtk
