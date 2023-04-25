@@ -1,11 +1,25 @@
 import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
-import keyboard
 
-class WordCounterApp(Gtk.Window):
+gi.require_version("Gtk", "4.0")
+gi.require_version('Adw', '1')
+from gi.repository import Gtk, GLib, Adw
+import keyboard
+from threading import Thread
+
+
+class WordCounterApp(Adw.Application):
     def __init__(self):
-        super().__init__(title="Word Counter")
+        super().__init__(application_id="com.example.WordCounterApp")
+
+    def do_startup(self):
+        Adw.Application.do_startup(self)
+
+    def do_activate(self):
+        app_window = Gtk.ApplicationWindow(application=self)
+        self.window = Gtk.Window()
+        app_window.set_transient_for(self.window)
+
+        self.window.set_title("Word Counter")
 
         self.word_count = 0
         self.misshit_count = 0
@@ -13,27 +27,26 @@ class WordCounterApp(Gtk.Window):
         self.running = False
         self.scores = []
 
-        self.set_border_width(10)
-
-        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        self.add(vbox)
-
-        self.label = Gtk.Label(label="Words per Minute: 0\nMisshit Count: 0\nTime Left: 0", xalign=0)
-        vbox.pack_start(self.label, True, True, 0)
-
-        hbox = Gtk.Box(spacing=6)
-        vbox.pack_start(hbox, True, True, 0)
-
-        self.start_button = Gtk.Button(label="Start")
+        self.label = Gtk.Label(label="Words per Minute: 0\nMisshit Count: 0\nTime Left: 0", wrap=True)
+        self.start_button = Gtk.Button.new_with_label("Start")
         self.start_button.connect("clicked", self.start_countdown)
-        hbox.pack_start(self.start_button, True, True, 0)
-
-        self.reset_button = Gtk.Button(label="Reset Counter")
+        self.reset_button = Gtk.Button.new_with_label("Reset Counter")
         self.reset_button.connect("clicked", self.reset_counter)
-        hbox.pack_start(self.reset_button, True, True, 0)
 
-        self.score_table = Gtk.Label(label="Score Table:", xalign=0)
-        vbox.pack_start(self.score_table, True, True, 0)
+        self.score_table = Gtk.Label(label="Score Table:")
+
+        grid = Gtk.Grid()
+        grid.set_column_spacing(10)
+        grid.set_row_spacing(10)
+        grid.attach(self.label, 0, 0, 2, 1)
+        grid.attach(self.start_button, 0, 1, 1, 1)
+        grid.attach(self.reset_button, 1, 1, 1, 1)
+        grid.attach(self.score_table, 0, 2, 2, 1)
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.append(grid)
+        self.window.set_child(box)
+        self.window.present()
 
         self.monitor_key_presses()
 
@@ -68,7 +81,8 @@ class WordCounterApp(Gtk.Window):
         self.reset_button.set_sensitive(True)
 
     def update_label(self):
-        self.label.set_text(f"Words per Minute: {self.word_count}\nMisshit Count: {self.misshit_count}\nTime Left: {self.time_left}")
+        self.label.set_text(
+            f"Words per Minute: {self.word_count}\nMisshit Count: {self.misshit_count}\nTime Left: {self.time_left}")
 
     def update_time_left(self):
         if self.running:
@@ -96,17 +110,14 @@ class WordCounterApp(Gtk.Window):
                 self.misshit_count += 1
                 self.update_label()
 
-    def run(self):
-        self.show_all()
-        Gtk.main()
-
     def on_close(self, window):
         self.running = False
-        Gtk.main_quit()
+        Adw.main_quit()
 
     def monitor_key_presses(self):
         keyboard.on_press(self.on_key_press)
-        self.connect("delete-event", self.on_close)
+        self.window.connect("destroy", self.on_close)
+
 
 if __name__ == "__main__":
     app = WordCounterApp()
